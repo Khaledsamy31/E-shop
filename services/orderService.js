@@ -6,6 +6,7 @@ const ApiFeatures = require("../utils/apiFeatures")
 const factory = require("./handlersFactory")
 const cartModel = require("../models/cartModel")
 const productModel = require("../models/productModel")
+const userModel = require("../models/userModel")
 
 
 
@@ -177,6 +178,44 @@ exports.checkOutSession = asyncHandler(async(req,res,next)=>{
     })
 })
 
+const createCardOrder = async(session)=>{
+    const cartId = session.client_reference_id;
+    const shippingAddress = session.client_reference_id;
+    const orderPrice = session.display_items[0].amount / 100;
+
+    const cart = await cartModel.findById(cartId)
+    const user = await userModel.findOne({email: session.customer_email})
+
+    // create order
+  // 3- Create order with default paymentMethodType (card/visa)
+    const order = await orderModel.create({
+        user: user._id, // to send logged user id
+        cartItems: cart.cartItems,
+        totalOrderPrice: orderPrice, // cuz it same name here and in schema
+        shippingAddress,
+        isPaid: true,
+        paidAt: Date.now(),
+        paymentMethodType: "card",
+    })
+
+      // 4- After creating order, decrement product quantity , increment product sold in schema
+    // bulkWrite to send more than 1 operation in one command like post,get,put,delete in one command
+    if(order){
+
+        const bulkOption = cart.cartItems.map((item) => ({
+            updateOne:{
+                filter: {_id: item.product},
+                update: { $inc: {quantity: -item.quantity, sold: + item.quantity}}
+            }
+        }))
+        await productModel.bulkWrite(bulkOption, {})
+
+        // 5- clear user cart depend on cartId
+        await cartModel.findByIdAndDelete(cartId)
+    }
+
+}
+
 exports.webhookCheckOut = asyncHandler(async(req,res,next)=> {
     const sig = req.headers["stripe-signature"]
 
@@ -193,6 +232,10 @@ exports.webhookCheckOut = asyncHandler(async(req,res,next)=> {
     }
 
     if(event.type === "checkout.session.completed"){
-        console.log("Create Order Here...")
+        
+        // Create Order
+        createCardOrder(event.data.object)
     }
+
+    res.status(200).json({received: true})
 })
