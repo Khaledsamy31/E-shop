@@ -4,12 +4,14 @@ const morgan = require("morgan")
 const path = require("path")
 const cors = require('cors')
 const compression = require('compression')
-const {webhookCheckOut} = require('./services/orderService')
 
 
 
 //to get info from config.env
 dotenv.config({path:"config.env"})
+
+const {webhookCheckOut} = require('./services/orderService')
+
 
 const ApiError = require("./utils/apiError")
 const globalError = require("./middlewares/errorMiddleware")
@@ -45,7 +47,7 @@ app.options('*', cors())
 app.use(compression())
 
 // checkout webhook
-app.post("webhook-checkout",
+app.post("/webhook-checkout",
      express.raw({type: "application/json"}),
       webhookCheckOut
         )
