@@ -181,7 +181,7 @@ exports.checkOutSession = asyncHandler(async(req,res,next)=>{
 const createCardOrder = async(session)=>{
     const cartId = session.client_reference_id;
     const shippingAddress = session.client_reference_id;
-    const orderPrice = session.display_items[0].amount / 100;
+    const orderPrice = session.amount_total / 100;
 
     const cart = await cartModel.findById(cartId)
     const user = await userModel.findOne({email: session.customer_email})
@@ -216,6 +216,9 @@ const createCardOrder = async(session)=>{
 
 }
 
+// @desc     This webhook will run when stripe payment cuccess paid
+// @route    POST  /webhook-checkout
+// @access   Private/user
 exports.webhookCheckOut = asyncHandler(async(req,res,next)=> {
     const sig = req.headers["stripe-signature"]
 
