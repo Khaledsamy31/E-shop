@@ -4,6 +4,7 @@ const morgan = require("morgan")
 const path = require("path")
 const cors = require('cors')
 const compression = require('compression')
+const {webhookCheckOut} = require('./services/orderService')
 
 
 
@@ -42,6 +43,12 @@ const app = express();
 app.use(cors())
 app.options('*', cors())
 app.use(compression())
+
+// checkout webhook
+app.post("webhook-checkout",
+     express.raw({type: "application/json"}),
+      webhookCheckOut
+        )
 
 app.use(express.static(path.join(__dirname, "uploads")))
 
